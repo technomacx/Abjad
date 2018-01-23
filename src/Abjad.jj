@@ -1,0 +1,359 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */
+options
+{
+  static = true; // all methods are static
+}
+
+PARSER_BEGIN(AbjadParser)
+
+import java.util.*;
+
+public class AbjadParser
+{
+  public static void main(String args []) throws ParseException, java.io.FileNotFoundException
+  {
+	AbjadParser  parser ;
+    parser = new AbjadParser(System.in,"UTF-8");
+    AbjadParser.Start();
+  }
+}
+
+PARSER_END(AbjadParser)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+| < "!!" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+}
+
+TOKEN : //NUMBERS
+{
+  < NUM : (["0"-"9"])+("."(["0"-"9"])*)?(("e"|"E")("+"|"-")?(["0"-"9"])+)?>
+}
+
+TOKEN : //words
+{
+  < LP    : "(" | "[" | "{" >
+| < RP    : ")" | "]" | "}" >
+| < QOUTE : "\"" >
+| < IF    : "\u0627\u0630\u0627"|"if"> //اذا
+| < ELSE  : "\u0648\u0627\u0644\u0627"|"else"> //والا
+| < WHILE : "\u0637\u0627\u0644\u0645\u0627"|"while"> //طالما
+| < FOR   : "\u0627\u0643\u0631\u0631"|"for"> // كرر
+| < READ  : "\u0627\u0642\u0631\u0627"|"read"> //اقرا
+| < PRINT : "\u0627\u0643\u062A\u0628"|"print"> //اكتب
+| < TRUE  : "\u0635\u062D"|"true"> //صح
+| < FALSE : "\u062E\u0637\u0627"|"false"> //خطا
+| < ELIF  : "\u0648\u0627\u0644\u0627\u0020\u0627\u0630\u0627"|"elis"> //والا اذا
+| < INT   : "\u0635\u062D\u064A\u062D"|"int"> //صجيج
+| < Float : "\u062D\u0642\u064A\u0642\u064A"|"float"> //حقيقي
+| < Char  : "\u062D\u0631\u0641"|"char"> //حرف
+| < Pointer :  "\u0645\u0648\u0634\u0631"|"pointer"> //موشر
+| < bool   : "\u0645\u0646\u0637\u0642\u064A"|"bool"> //منطقي
+| < assign : "\u0627\u062C\u0639\u0644"|"assign"> //اجعل
+| < until : "\u062D\u062A\u0649"|"until"> //حتى
+| < VAR : "\u0645\u062A\u062D\u0648\u0644"|"var"> //متحول
+| < FUN   : "\u062A\u0627\u0628\u0639"|"fun"> //تابع
+| < CLMN  : ":" > 
+| < FAS   : "," >
+| < ONCE :"\u0645\u0631\u0629"|"once"> //مرة
+| < OF :  "\u0645\u0646"|"of"> //من
+| < TO : "\u0627\u0644\u0649"|"to"> //الى
+
+
+
+}
+
+TOKEN: //OPERATORS
+{
+  < PLUS     : "+"|"-" >
+| < MULTIPLY : "*"|"/" >
+| < EXPONENT : "^">
+| < MODULUS  : "%" >
+}
+
+TOKEN: //COMPARSION
+{
+  < COMP : ">=" | "<=" | ">" | "<" | "==" | "!>" >
+}
+
+TOKEN: //ASSIGNMENT
+{
+  < ASSIGN  : "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^="  >
+}
+
+TOKEN: //Bitwise Operators
+{
+  < BITWISE : "&&" | "||" | "~" | ">>" | "<<" > 
+}
+
+TOKEN : //STRINGS
+{
+  < ID    :(["\u0600" - "\u077F"])( ["\u0600"-"\u077F"])*(["0"-"9"] )*("_")* >
+}
+
+Node start():
+{
+  Node n = null;
+  ScopeNode node = new ScopeNode();
+  
+}
+{
+  (
+    n = statement()
+    { node.addChild(n); }
+  )+
+  < EOF >
+ { return node; }
+ 
+}
+
+
+Node statement ():
+{
+  Node n = null;
+}
+{
+  (
+  n = assign() | ifstmt() | break_loop() | printstmt() | defstmt() | func() | Readstmt()
+  )
+	{return n;}
+}
+
+void func():
+{
+}
+{
+  < FUN > < ID > < LP > (< ID > (< FAS > < ID >)*) < RP > "->" (<INT >| <Float >|< Char>|< bool>) " { " (statement())+ " }" 
+}
+
+Node assign():
+{
+  AssignNode node = new AssignNode();
+  Node n = null;
+  Token t;
+}
+{
+  t = < assign >  < ID> < ASSIGN > n = E() 
+  {
+    node.setVariable(t.image);
+    node.addChild(n);
+    return node;
+  }
+  
+}
+
+void printstmt():
+{
+  WriteNode node = new WriteNode();
+  Token t;
+  ExpressionNode  n1 = null;
+}
+{
+   t = < PRINT >  n1 = E()
+   {
+     
+    //node.setVariable(n1);
+    System.out.println(n1.getResult());
+	//return node;
+	}
+}
+
+
+ComparisionNode comp():
+{
+  ComparisionNode node = new ComparisionNode();
+  Node n1=null,n2=null;
+  Token t;
+}
+{
+  n1 = E() t = < COMP > n2 = E()
+  {
+    node.setOperation(t.image);
+    node.addChild(n1);
+    node.addChild(n2);
+    return node;
+  } 
+}
+
+IfNode ifstmt():
+{
+  IfNode node = new IfNode();
+  Node n = null;
+  ScopeNode n1 = new ScopeNode(),n2 = null;
+}
+{
+  < IF > n = comp()
+  {
+    node.addChild(n);
+  }
+  	(
+  	  n = statement()
+  	  {
+  	    n1.addChild(n);
+  	  }
+  	)+
+ (
+   (
+    < ELSE >
+    {
+      n2 = new ScopeNode();}
+      (
+        n = statement()
+        {n2.addChild(n); }
+     )
+  )
+| < ELIF >
+
+)
+  {
+    node.addChild(n1);
+    if (n2 != null)
+    	node.addChild(n2);
+    return node;
+  }
+}
+
+void forstmt():
+{
+}
+{
+   <WHILE > (< LP >)? comp() (< RP >)? 
+   " { "
+  (
+    statement() 
+  )+
+   " }"
+}
+
+
+void break_loop(): { }
+{
+  
+  < FOR > (forstmt()|doWhilestmt() | whilestmt())
+
+
+}
+
+void doWhilestmt ():
+{
+}
+{ 
+  " { "
+  (
+    statement()
+  )+
+  " }"
+  (< LP >)? comp() (< RP >)?
+}
+
+void whilestmt():
+{
+}
+{
+   < OF > defstmt() <ASSIGN > <NUM > < TO > <NUM > |  defstmt() <ASSIGN > <NUM > < TO > <NUM > <ONCE >
+  					 " { "
+  					 (statement())+
+  					 " }"
+}
+
+
+
+
+
+void Readstmt():
+{
+}
+{
+  <READ > (E())+
+}
+
+void defstmt():
+{
+}
+{
+  < VAR > < ID > < CLMN >( (<INT> |<Float >|<bool >|<Char >) | (<Pointer > <TO > (<INT> |<Float >|<bool >|<Char > ) ) )
+}
+
+
+void Start():
+{
+}
+{
+  (
+    statement()
+  )+
+  { System.out.println("OK!");}
+}
+
+ExpressionNode E():
+{
+  ExpressionNode n1 =null,n2 = null;
+  Token t = null;
+}
+{ 
+	n1 = F()(t = < PLUS > n2 = E()) ?
+	{
+	  if (n2 == null)
+	  	return n1;
+	  else
+	  {
+	 	ExpressionNode node = new ExpressionNode();
+	 	node.setOperation(t.image);
+	 	node.addChild(n1);
+	 	node.addChild(n2);
+	 	return node;   
+	  }
+	}
+}
+
+ExpressionNode F():
+{
+  ExpressionNode n1,n2 = null;
+  Token t = null;
+}
+{
+  n1 = N()( t = < MULTIPLY > n2 = F())?
+  {
+	  if (n2 == null)
+	  	return n1;
+	  else
+	  {
+	 	ExpressionNode node = new ExpressionNode();
+	 	node.setOperation(t.image);
+	 	node.addChild(n1);
+	 	node.addChild(n2);
+	 	return node;   
+	  }
+	}
+}
+
+ExpressionNode N():
+{
+  ExpressionNode n = new ExpressionNode() ;
+  Token t;
+}
+{
+  (
+    
+  t = < NUM >
+  {
+    ConstantNode cn = new ConstantNode();
+    cn.setConstant(Double.parseDouble(t.image));
+    n = cn;
+  }
+  |< LP > n = E() < RP >
+  | t = < ID >
+  {
+    VariableNode vn = new VariableNode();
+    vn.setVariable(t.image);
+    n = vn;
+     }
+   )
+   { return n; } 
+}
